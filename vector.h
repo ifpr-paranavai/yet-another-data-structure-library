@@ -261,7 +261,6 @@ namespace yadsl
 				this->arr = new value_type[this->_capacity];
 				this->_size = 0;
 			}
-			// todo
 			int64_t emplace (index_type index, const value_type& val)
 			{
 				if (index > this->_size)
