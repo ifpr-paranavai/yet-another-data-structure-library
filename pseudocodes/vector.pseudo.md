@@ -26,6 +26,9 @@ Vector
             error "index out of range"
         
         return arr[index]
+
+    Pop()
+        size = size - 1;
     
     Erase(index)
         if index >= size
