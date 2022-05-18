@@ -8,7 +8,17 @@ Vector
         arr = [capacity]
 
     Push-Back(value)
-        arr[size] = value
+        if size < capacity
+            arr[size] = value
+        else
+            capacity = capacity+1
+            temp = arr
+            delete arr
+            arr = [capacity]
+            for i = 0 to size
+                arr[i] = temp[i]
+            delete temp
+            arr[size] = value
         size = size+1
 
     At(index)
@@ -17,8 +27,8 @@ Vector
         
         return arr[index]
     
-    erase(index)
-        if index == size
+    Erase(index)
+        if index >= size
             return -1
         if index == size-1
             index = index-1
