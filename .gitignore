@@ -3,6 +3,7 @@
 !*.h
 !*.cpp
 !README.md
+!/pseudocodes/*.pseudo.md
 !*/
 
 test.cpp
