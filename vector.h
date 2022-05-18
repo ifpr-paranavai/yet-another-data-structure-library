@@ -1,11 +1,15 @@
 #ifndef __YADSL_VECTOR__
 #define __YADSL_VECTOR__
 
+#include <inttypes.h>
 #include <initializer_list>
 #include <functional>
-#include <inttypes.h>
+#include <stdexcept>
 #include <iostream>
+#include <math.h>
 #include "lib.h"
+
+#define LINDEX this->_size - 1 // last index
 
 namespace yadsl 
 {
@@ -33,25 +37,33 @@ namespace yadsl
 				for (auto it = il.begin(); it != il.end(); it++)
 					this->push(*it);
 			}
+			void alloc (size_t capacity)
+			{
+				try {
+					this->arr = new value_type[capacity];
+					this->_capacity = capacity;
+				}
+				catch(const std::bad_alloc& e) {
+					throw e;
+				}
+			}
 			void realloc (size_type new_capacity, bool copy_current_val = false)
 			{
 				if (!copy_current_val) {
 					delete[] this->arr;
-					this->arr = new value_type[new_capacity];
+					this->alloc(new_capacity);
 					this->_size = 0;
+					return;
 				}
-				else {
-					if (new_capacity < this->_size)
-						this->_size = new_capacity;
-						
-					value_type *temp = this->arr;
-					this->arr = new value_type[new_capacity];
-					for (size_type n = 0; n < this->_size; n++) 
-						this->arr[n] = temp[n];
-					delete[] temp;
-				}
-				
-				this->_capacity = new_capacity;
+
+				if (new_capacity < this->_size)
+					this->_size = new_capacity;
+					
+				value_type *temp = this->arr;
+				this->alloc(new_capacity);
+				for (size_type n = 0; n < this->_size; n++) 
+					this->arr[n] = temp[n];
+				delete[] temp;
 			}
 		
 		// constructors
@@ -63,8 +75,7 @@ namespace yadsl
 			}
 			vector_t (size_type capacity)
 			{
-				this->arr = new value_type[capacity];
-				this->_capacity = capacity;
+				this->alloc(capacity);
 			}
 			vector_t (size_type capacity, const value_type& val) : vector_t(capacity)
 			{
@@ -81,15 +92,19 @@ namespace yadsl
 			}
 			vector_t (class_type& vector) : vector_t(vector.capacity(), vector.data()) {}
 		
-		// capacity
+		// size
 		public:
-			inline size_type capacity ()
+			inline size_type capacity () const noexcept
 			{
 				return this->_capacity;
 			}
-			inline size_type size ()
+			inline size_type size () const noexcept
 			{
 				return this->_size;
+			}
+			uint64_t max_size () const noexcept
+			{
+				return pow(2, ENVBITSIZE)/sizeof(value_type)-1;
 			}
 			void resize (size_type new_size)
 			{
@@ -115,9 +130,13 @@ namespace yadsl
 				
 				this->_size = new_size;
 			}
-			inline bool empty ()
+			inline bool empty () const noexcept
 			{
 				return this->_size == 0;
+			}
+			inline bool full () const noexcept
+			{
+				return this->_size == this->_capacity;
 			}
 			void reserve (size_type new_capacity)
 			{
@@ -127,7 +146,7 @@ namespace yadsl
 			}
 			void shrink_to_fit ()
 			{
-				if (this->_size == this->_capacity)
+				if (this->full())
 					return;
 				this->realloc(this->_size, true);
 			}
@@ -140,17 +159,20 @@ namespace yadsl
 			}
 			value_type& at (index_type index)
 			{
+				if (index > LINDEX)
+					throw std::out_of_range("Index out of range");
+
 				return this->arr[index];
 			}
-			value_type front ()
+			value_type& front ()
 			{
 				return this->at(0);
 			}
-			value_type back ()
+			value_type& back ()
 			{
-				return this->at(this->_size-1);
+				return this->at(LINDEX);
 			}
-			inline value_type* data ()
+			inline value_type* data () const noexcept
 			{
 				return this->arr;
 			}
@@ -167,25 +189,97 @@ namespace yadsl
 			}
 			void push (const value_type& val)
 			{
-				if (this->_size == this->_capacity) 
+				if (this->full()) 
 					this->realloc(this->_capacity+1, true);
 				
 				this->arr[this->_size] = val; 
 				this->_size++;
 			}
-			void set (index_type index, const value_type& val)
+			void set (index_type index, const value_type& val) const noexcept
 			{
-				this->arr[index] = val;
+				if (index <= LINDEX)
+					this->arr[index] = val;
 			}
-			void pop ()
+			void pop () noexcept
 			{
-				this->_size--;
+				if (this->_size > 0)
+					this->_size--;
 			}
-			void insert (const value_type& val, size_type index, size_type n)
+			int64_t insert (index_type index, const value_type& val)
 			{
-				for (size_type i = index; i < n; i++)
-					this->set(i, val);
-				this->_size += (n - index) - 1;
+				if (index > LINDEX)
+					return -1;
+
+				this->push(val);
+
+				for (size_type i = LINDEX; i > index; i--) {
+					value_type temp = this->arr[i];
+					this->arr[i] = this->arr[i-1];
+					this->arr[i-1] = temp;
+				}
+
+				return index;
+			}
+			int64_t insert (index_type index, value_type&& val)
+			{
+				if (index > LINDEX)
+					return -1;
+
+				this->push(val);
+
+				for (size_type i = LINDEX; i > index; i--) {
+					value_type temp = this->arr[i];
+					this->arr[i] = this->arr[i-1];
+					this->arr[i-1] = temp;
+				}
+
+				return index;
+			}
+			int64_t insert (index_type index, size_type n, const value_type& val)
+			{
+				if (index > LINDEX)
+					return -1;
+
+				if (this->full())
+					this->realloc(this->_capacity+n, true);
+				
+				for (index_type i = LINDEX+1; i < this->_size+n; i++)
+					this->arr[i] = val;
+
+				this->_size += n;
+				for (int64_t i = LINDEX-n, vmoved = 0; i >= index && i > -1; i--, vmoved++) {
+					value_type temp = this->arr[i];
+					this->arr[i] = this->arr[LINDEX-vmoved];
+					this->arr[LINDEX-vmoved] = temp;
+				}
+
+				return index;
+			}
+			int64_t insert (index_type index, std::initializer_list<value_type> il)
+			{
+				if (index > LINDEX)
+					return -1;
+				
+				uint64_t n = il.size();
+
+				if (this->full())
+					this->realloc(this->_capacity+n, true);
+
+				value_type *rslice = new value_type[this->_size-index];
+
+				for (index_type i = index, j = 0; i < this->_size; i++, j++)
+					rslice[j] = this->arr[i];
+
+				this->_size += n;
+				for (index_type i = index, ilindex = 0; i < index+n; i++, ilindex++)
+					this->arr[i] = *(il.begin()+ilindex);
+
+				for (index_type i = index+n, j = 0; i < this->_size; i++, j++)
+					this->arr[i] = rslice[j];
+
+				delete[] rslice;
+
+				return index;
 			}
 			void assign (size_type capacity, const value_type& val)
 			{
@@ -197,33 +291,30 @@ namespace yadsl
 				this->realloc(il.size());
 				this->fill(il);
 			}
-			int64_t erase (index_type index)
+			int64_t erase (index_type index) noexcept
 			{
-				#define L_INDEX this->_size - 1 
-				if (index > L_INDEX)
+				if (index > LINDEX)
 					return -1;
-				else if (index == L_INDEX) 
+				else if (index == LINDEX) 
 					index--;
 				else 
-					for (size_type n = index; n < L_INDEX; n++)
+					for (size_type n = index; n < LINDEX; n++)
 						this->arr[n] = this->arr[n+1];
-				#undef L_INDEX
 				
 				this->_size--;
 				return index;
 			}
-			int64_t erase (index_type first, index_type last)
+			int64_t erase (index_type first, index_type last) noexcept
 			{
-				#define L_INDEX this->_size - 1 
-				if ((first > L_INDEX || last > L_INDEX) || first > last)
+				if ((first > LINDEX || last > LINDEX) || first > last)
 					return -1;
-				else if (first == last && last == L_INDEX) {
+				else if (first == last && last == LINDEX) {
 					this->_size--;
 					first--;
 				}
 				else {
 					for (index_type i = first; i < last; i++)
-						for (size_type n = first; n < L_INDEX; n++) {
+						for (size_type n = first; n < LINDEX; n++) {
 							value_type temp = arr[n];
 							this->arr[n] = this->arr[n+1];
 							this->arr[n+1] = temp;
@@ -231,7 +322,6 @@ namespace yadsl
 
 					this->_size -= last - first;
 				}
-				#undef L_INDEX
 				
 				return first;
 			}
@@ -241,8 +331,7 @@ namespace yadsl
 					delete[] this->arr;
 					
 				this->_size = 0;
-				this->_capacity = vector.capacity();
-				this->arr = new value_type[this->_capacity];
+				this->alloc(vector.capacity());
 				for (size_type n = 0; n < this->_capacity; n++)
 					this->push(vector[n]);
 			}
@@ -258,18 +347,20 @@ namespace yadsl
 					return;
 					
 				delete[] this->arr;
-				this->arr = new value_type[this->_capacity];
+				this->alloc(this->_capacity);
 				this->_size = 0;
 			}
-			int64_t emplace (index_type index, const value_type& val)
+			template <class... Args>
+			int64_t emplace (index_type index, Args&&... args)
 			{
-				if (index > this->_size)
-					return -1;
-					
-				if (this->_size == this->_capacity)
+				if (this->full())
 					this->realloc(this->_capacity+1, true);
-					
-				if (index < this->_size)
+				
+				if (index > LINDEX)
+					return -1;	
+				else if (index == LINDEX)
+					this->arr[LINDEX+1] = this->arr[LINDEX];
+				else
 					for (size_type n = this->_size; n > index; n--) {
 						value_type temp = arr[n];
 						this->arr[n] = this->arr[n-1];
@@ -277,17 +368,27 @@ namespace yadsl
 					}
 					
 				this->_size++;
-				this->arr[index] = val;
+				this->arr[index] = value_type(args...);
 				return index;
+			}
+			template <class... Args>
+			int64_t emplace_back (Args&&... args) 
+			{
+				if (this->full())
+					this->realloc(this->_capacity + 1, true);
+
+				this->arr[this->_size] = value_type(args...);
+				this->_size++;
+				return LINDEX;
 			}
 			
 		// comparisons
 		public:
-			bool operator==(class_type& vector)
+			bool operator==(class_type& vector) const noexcept
 			{
 				return this->is_equal(vector);
 			}
-			bool is_equal (class_type& vector)
+			bool is_equal (class_type& vector) const noexcept
 			{
 				if (this->_size != vector.size())
 					return false;
@@ -298,33 +399,33 @@ namespace yadsl
 				
 				return true;
 			}
-			bool operator!=(class_type& vector)
+			bool operator!=(class_type& vector) const noexcept
 			{
 				return !this->is_equal(vector);
 			}
-			inline bool operator>(class_type& vector)
+			inline bool operator>(class_type& vector) const noexcept
 			{
 				return this->_size > vector.size();
 			}
-			inline bool operator<(class_type& vector)
+			inline bool operator<(class_type& vector) const noexcept
 			{
 				return this->_size < vector.size();
 			}
-			inline bool operator>=(class_type& vector)
+			inline bool operator>=(class_type& vector) const noexcept
 			{
 				return this->_size >= vector.size();
 			}
-			inline bool operator<=(class_type& vector)
+			inline bool operator<=(class_type& vector) const noexcept
 			{
 				return this->_size <= vector.size();
 			}
 		
 		// others
 		public:
-			int64_t index_of (value_type val)
+			int64_t index_of (value_type val) const noexcept
 			{
 				for (size_type n = 0; n < this->_size; n++)
-					if (this->at(n) == val)
+					if (this->arr[n] == val)
 						return n;
 				
 				return -1;
@@ -333,7 +434,7 @@ namespace yadsl
 			{	
 				std::cout << "[";
 				for (size_type n = 0; n < this->_size; n++)
-					std::cout << this->at(n) << ", ";
+					std::cout << (n > 0 ? ", " : "") << this->at(n);
 				std::cout << "]" << std::endl;
 				std::cout << "s(" << this->_size << ") ";
 				std::cout << "c(" << this->_capacity << ")" << std::endl;
@@ -365,6 +466,8 @@ namespace yadsl
 		y.copy(temp);
 	}
 }
+
+#undef LINDEX
 
 #endif
 
