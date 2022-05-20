@@ -1,7 +1,4 @@
-Vector 
-    arr
-    capacity
-    size = 0
+# Vector Pseudocode
 
     Vector(n)
         capacity = n
@@ -28,7 +25,7 @@ Vector
         return arr[index]
 
     Pop()
-        size = size - 1;
+        size = size - 1
     
     Erase(index)
         if index >= size
