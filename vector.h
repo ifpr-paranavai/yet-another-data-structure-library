@@ -9,7 +9,7 @@
 #include <math.h>
 #include "lib.h"
 
-#define LINDEX this->_size - 1 // last index
+#define LINDEX (this->_size - 1) // last index
 
 namespace yadsl 
 {
@@ -37,15 +37,20 @@ namespace yadsl
 				for (auto it = il.begin(); it != il.end(); it++)
 					this->push(*it);
 			}
+			void rshift_arr_content (index_type from, size_type places=1)
+			{
+				for (index_type i = LINDEX; i > (from+places)-1; i--) 
+					this->arr[i] = this->arr[i-places];
+			}
+			void lshift_arr_content (index_type from, size_type places=1)
+			{
+				for (size_type i = from; i < (LINDEX-places)+1; i++)
+					this->arr[i] = this->arr[i+places];
+			}
 			void alloc (size_t capacity)
 			{
-				try {
-					this->arr = new value_type[capacity];
-					this->_capacity = capacity;
-				}
-				catch(const std::bad_alloc& e) {
-					throw e;
-				}
+				this->arr = new value_type[capacity];
+				this->_capacity = capacity;
 			}
 			void realloc (size_type new_capacity, bool copy_current_val = false)
 			{
@@ -104,7 +109,7 @@ namespace yadsl
 			}
 			uint64_t max_size () const noexcept
 			{
-				return pow(2, ENVBITSIZE)/sizeof(value_type)-1;
+				return (1ULL << (ENVBITSIZE-1))/sizeof(value_type);
 			}
 			void resize (size_type new_size)
 			{
@@ -209,14 +214,12 @@ namespace yadsl
 			{
 				if (index > LINDEX)
 					return -1;
+				else if (this->full())
+					this->realloc(1, true);
 
-				this->push(val);
-
-				for (size_type i = LINDEX; i > index; i--) {
-					value_type temp = this->arr[i];
-					this->arr[i] = this->arr[i-1];
-					this->arr[i-1] = temp;
-				}
+				this->_size++;
+				this->rshift_arr_content(index);
+				this->arr[index] = val;
 
 				return index;
 			}
@@ -224,14 +227,12 @@ namespace yadsl
 			{
 				if (index > LINDEX)
 					return -1;
+				else if (this->full())
+					this->realloc(1, true);
 
-				this->push(val);
-
-				for (size_type i = LINDEX; i > index; i--) {
-					value_type temp = this->arr[i];
-					this->arr[i] = this->arr[i-1];
-					this->arr[i-1] = temp;
-				}
+				this->_size++;
+				this->rshift_arr_content(index);
+				this->arr[index] = val;
 
 				return index;
 			}
@@ -239,45 +240,33 @@ namespace yadsl
 			{
 				if (index > LINDEX)
 					return -1;
-
-				if (this->full())
+				else if (this->full())
 					this->realloc(this->_capacity+n, true);
-				
-				for (index_type i = LINDEX+1; i < this->_size+n; i++)
-					this->arr[i] = val;
+				else if ((this->_capacity - this->_size) < n) 
+					this->realloc(this->_capacity + (n-(this->_capacity-this->_size)), true);
 
 				this->_size += n;
-				for (int64_t i = LINDEX-n, vmoved = 0; i >= index && i > -1; i--, vmoved++) {
-					value_type temp = this->arr[i];
-					this->arr[i] = this->arr[LINDEX-vmoved];
-					this->arr[LINDEX-vmoved] = temp;
-				}
+				this->rshift_arr_content(index, n);
+				for (index_type i = index; i < index+n; i++)
+					this->arr[i] = val;
 
 				return index;
 			}
 			int64_t insert (index_type index, std::initializer_list<value_type> il)
 			{
-				if (index > LINDEX)
-					return -1;
-				
 				uint64_t n = il.size();
 
-				if (this->full())
+				if (index > LINDEX)
+					return -1;
+				else if (this->full())
 					this->realloc(this->_capacity+n, true);
-
-				value_type *rslice = new value_type[this->_size-index];
-
-				for (index_type i = index, j = 0; i < this->_size; i++, j++)
-					rslice[j] = this->arr[i];
-
+				else if ((this->_capacity - this->_size) < n) 
+					this->realloc(this->_capacity + (n-(this->_capacity-this->_size)), true);
+				
 				this->_size += n;
-				for (index_type i = index, ilindex = 0; i < index+n; i++, ilindex++)
-					this->arr[i] = *(il.begin()+ilindex);
-
-				for (index_type i = index+n, j = 0; i < this->_size; i++, j++)
-					this->arr[i] = rslice[j];
-
-				delete[] rslice;
+				this->rshift_arr_content(index, n);
+				for (index_type i = index; i < index + n; i++)
+					this->arr[i] = *(il.begin()+(i-index));
 
 				return index;
 			}
@@ -295,18 +284,15 @@ namespace yadsl
 			{
 				if (index > LINDEX)
 					return -1;
-				else if (index == LINDEX) 
-					index--;
-				else 
-					for (size_type n = index; n < LINDEX; n++)
-						this->arr[n] = this->arr[n+1];
-				
+
+				this->lshift_arr_content(index);
 				this->_size--;
-				return index;
+
+				return (index-1) == LINDEX ? index-1 : index;
 			}
 			int64_t erase (index_type first, index_type last) noexcept
 			{
-				if ((first > LINDEX || last > LINDEX) || first > last)
+				if ((first > LINDEX || last > LINDEX+1) || first > last)
 					return -1;
 				else if (first == last && last == LINDEX) {
 					this->_size--;
@@ -314,11 +300,7 @@ namespace yadsl
 				}
 				else {
 					for (index_type i = first; i < last; i++)
-						for (size_type n = first; n < LINDEX; n++) {
-							value_type temp = arr[n];
-							this->arr[n] = this->arr[n+1];
-							this->arr[n+1] = temp;
-						}
+						this->lshift_arr_content(first);
 
 					this->_size -= last - first;
 				}
@@ -358,16 +340,9 @@ namespace yadsl
 				
 				if (index > LINDEX)
 					return -1;	
-				else if (index == LINDEX)
-					this->arr[LINDEX+1] = this->arr[LINDEX];
-				else
-					for (size_type n = this->_size; n > index; n--) {
-						value_type temp = arr[n];
-						this->arr[n] = this->arr[n-1];
-						this->arr[n-1] = temp;
-					}
 					
 				this->_size++;
+				this->rshift_arr_content(index);
 				this->arr[index] = value_type(args...);
 				return index;
 			}
