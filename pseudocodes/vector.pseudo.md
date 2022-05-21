@@ -1,40 +1,45 @@
 # Vector Pseudocode
 
-    Vector(n)
-        capacity = n
-        arr = [capacity]
-
-    Push-Back(value)
-        if size < capacity
-            arr[size] = value
-        else
-            capacity = capacity+1
-            temp = arr
-            delete arr
-            arr = [capacity]
-            for i = 0 to size
-                arr[i] = temp[i]
-            delete temp
-            arr[size] = value
-        size = size+1
-
-    At(index)
-        if index >= size
-            error "index out of range"
+    Vector
+        capacity
+        arr
+        size = 0
         
-        return arr[index]
+        Vector(capacity)
+            this.capacity = capacity
+            this.arr = Alloc([capacity])
 
-    Pop()
-        size = size - 1
-    
-    Erase(index)
-        if index >= size
-            return -1
-        if index == size-1
-            index = index-1
-        else
-            for i = index to size-1
-                arr[i] = arr[i+1]
+        Push-Back(value)
+            if this.size < this.capacity
+                this.arr[size] = value
+            else
+                this.capacity = this.capacity + 1
+                temp = arr
+                delete this.arr
+                this.arr = Alloc([capacity])
+                for i = 0 to this.size - 1
+                    this.arr[i] = temp[i]
+                delete temp
+                this.arr[this.size] = value
+            this.size = this.size + 1
 
-        size = size-1
-        return index
+        At(index)
+            if index >= this.size
+                error "index out of range"
+
+            return this.arr[index]
+
+        Pop()
+            this.size = this.size - 1
+
+        Erase(index)
+            if index >= this.size
+                return -1
+            if index == this.size - 1
+                index = index - 1
+            else
+                for i = index to this.size - 1
+                    this.arr[i] = this.arr[i+1]
+
+            this.size = this.size - 1
+            return index
