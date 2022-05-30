@@ -1,117 +1,117 @@
 # Doubly Linked List Pseudocode
 
-Node
-	value
-	prev = NIL
-	next = NIL
+	Node
+		value
+		prev = NIL
+		next = NIL
 
-	Node(value)
-		this.value = value
+		Node(value)
+			this.value = value
 
-DoublyLinkList
-	head = NIL
-	tail = NIL
-	size = 0
+	DoublyLinkList
+		head = NIL
+		tail = NIL
+		size = 0
 
-	Push-Front(value)
-		new_node = alloc Node(value)
-		this.size = this.size+1
-		if this.head != NIL
+		Push-Front(value)
+			new_node = alloc Node(value)
+			this.size = this.size+1
+			if this.head != NIL
+				this.head = new_node
+				this.tail = new_node
+				return;
+			this.head.prev = new_node
+			new_node.next = this.head
 			this.head = new_node
+
+		Push-Back(value)
+			new_node = alloc Node(value)
+			this.size = this.size+1
+			if this.head != NIL
+				this.head = new_node
+				this.tail = new_node
+				return;
+			this.tail.next = new_node
+			new_node.prev = this.tail
 			this.tail = new_node
-			return;
-		this.head.prev = new_node
-		new_node.next = this.head
-		this.head = new_node
 
-	Push-Back(value)
-		new_node = alloc Node(value)
-		this.size = this.size+1
-		if this.head != NIL
-			this.head = new_node
-			this.tail = new_node
-			return;
-		this.tail.next = new_node
-		new_node.prev = this.tail
-		this.tail = new_node
-
-	Get(value)
-		node = this.head
-		while node != NIL and node.value != value
-			node = node.next
-		return node
-
-	At(index)
-		if index > this.size-1
-			error "index out of range"
-		else if index == 0
-			return this.head.value
-		else if index == this.size-1
-			return this.tail.value
-		node = NIL
-		if index < (this.size-1)/2
+		Get(value)
 			node = this.head
-				for i = 0 to index-1
-					node = node.next
-		else
-			node = this.tail
-				for i = this.size-1 to index-1
-					node = node.prev
-		return node.value
+			while node != NIL and node.value != value
+				node = node.next
+			return node
 
-	Pop-Front()
-		if this.head == NIL
-			return;
-		head_node = this.head
-		if head_node.next != NIL
-			this.head = head_node.next
-			this.head.prev = NIL
-		else
-			this.head = NIL
-			this.tail = NIL
-		this.size = this.size-1
-		delete head_node
-	
-	Pop-Back()
-		if this.tail = NIL
-			return;
-		tail_node = this.tail
-		if tail_node.prev != NIL
-			this.tail = tail_node.prev
-			this.tail.next = NIL
-		else
-			this.head = NIL
-			this.tail = NIL
-		this.size = this.size-1
-		delete tail_node
+		At(index)
+			if index > this.size-1
+				error "index out of range"
+			else if index == 0
+				return this.head.value
+			else if index == this.size-1
+				return this.tail.value
+			node = NIL
+			if index < (this.size-1)/2
+				node = this.head
+					for i = 0 to index-1
+						node = node.next
+			else
+				node = this.tail
+					for i = this.size-1 to index-1
+						node = node.prev
+			return node.value
 
-	Erase(node)
-		r = NIL
-		if node == this.head
-			if node == this.tail
+		Pop-Front()
+			if this.head == NIL
+				return;
+			head_node = this.head
+			if head_node.next != NIL
+				this.head = head_node.next
+				this.head.prev = NIL
+			else
 				this.head = NIL
 				this.tail = NIL
-				this.size = 0
+			this.size = this.size-1
+			delete head_node
+
+		Pop-Back()
+			if this.tail = NIL
+				return;
+			tail_node = this.tail
+			if tail_node.prev != NIL
+				this.tail = tail_node.prev
+				this.tail.next = NIL
 			else
-				this.head = node.next
-				this.head.prev = NIL
-				r = this.head
-		else if node == this.tail
-			this.tail = node.prev
-			this.tail.next = NIL
-			r = this.tail
-		else
-			node.next.prev = node.prev
-			node.prev.next = node.next
-			r = node.next
-		this.size = this.size-1
-		delete node
-		return r
-	
-	Remove(value)
-		node = this.head
-		while node != NIL
-			next = node.next
-			if node.value == value
-				Erase(node)
-			node = next
+				this.head = NIL
+				this.tail = NIL
+			this.size = this.size-1
+			delete tail_node
+
+		Erase(node)
+			r = NIL
+			if node == this.head
+				if node == this.tail
+					this.head = NIL
+					this.tail = NIL
+					this.size = 0
+				else
+					this.head = node.next
+					this.head.prev = NIL
+					r = this.head
+			else if node == this.tail
+				this.tail = node.prev
+				this.tail.next = NIL
+				r = this.tail
+			else
+				node.next.prev = node.prev
+				node.prev.next = node.next
+				r = node.next
+			this.size = this.size-1
+			delete node
+			return r
+
+		Remove(value)
+			node = this.head
+			while node != NIL
+				next = node.next
+				if node.value == value
+					Erase(node)
+				node = next
