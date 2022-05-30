@@ -2,12 +2,12 @@
 
     Vector
         capacity
-        arr
+        arr = NIL
         size = 0
         
         Vector(capacity)
             this.capacity = capacity
-            this.arr = Alloc([capacity])
+            this.arr = alloc [capacity]
 
         Push-Back(value)
             if this.size < this.capacity
@@ -16,7 +16,7 @@
                 this.capacity = this.capacity + 1
                 temp = arr
                 delete this.arr
-                this.arr = Alloc([capacity])
+                this.arr = alloc [capacity]
                 for i = 0 to this.size - 1
                     this.arr[i] = temp[i]
                 delete temp
