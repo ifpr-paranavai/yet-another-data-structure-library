@@ -177,13 +177,12 @@ namespace yadsl
 			}
 			node_t* erase (node_t *node)
 			{
-				node_t *r;
+				node_t *r = nullptr;
 				if (node == this->head) {
 					if (node == this->tail) {
 						this->head = nullptr;
 						this->tail = nullptr;
 						this->_size = 0;
-						r = nullptr;
 					}
 					else {
 						this->head = node->next;
