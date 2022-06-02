@@ -101,7 +101,7 @@ namespace yadsl
 			}
 			inline bool empty () const noexcept
 			{
-				return this->_size > 0;
+				return this->_size == 0;
 			}
 
 		// modifiers
