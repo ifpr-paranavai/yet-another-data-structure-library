@@ -54,11 +54,11 @@ namespace yadsl
 			{
 				if (node == nullptr)
 					return nullptr;
-				if (val == node->value)
-					return node;
-				else if (val < node->value)
+				if (val < node->value)
 					return this->get(node->left, val);
-				return this->get(node->right, val);
+				else if (val >= node->value)
+					return this->get(node->right, val);
+				return node;
 			}
 			node_t *find_small_node (node_t *node) const noexcept
 			{
