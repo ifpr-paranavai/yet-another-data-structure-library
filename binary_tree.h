@@ -32,22 +32,23 @@ namespace yadsl
 		private:
 			void add (node_t *node, const value_type& val)
 			{
-				if (val < node->value) {
-					if (node->left == nullptr) {
-						node->left = new node_t(val);
-						this->_size++;
-					}
-					else
-						this->add(node->left, val);
-				}
+				if (this->root == nullptr)
+					this->root = new node_t(val);
 				else {
-					if (node->right == nullptr) {
-						node->right = new node_t(val);
-						this->_size++;
+					if (val < node->value) {
+						if (node->left == nullptr)
+							node->left = new node_t(val);
+						else
+							return this->add(node->left, val);
 					}
-					else
-						this->add(node->right, val);
+					else {
+						if (node->right == nullptr)
+							node->right = new node_t(val);
+						else
+							return this->add(node->right, val);
+					}
 				}
+				this->_size++;
 			}
 			node_t* get (node_t *node, const value_type& val) const noexcept
 			{
@@ -59,14 +60,39 @@ namespace yadsl
 					return this->get(node->left, val);
 				return this->get(node->right, val);
 			}
-			node_t* find_min_node (node_t *node) const noexcept
+			node_t *find_small_node (node_t *node) const noexcept
 			{
-				if (node->left != nullptr)
-					return this->find_min_node(node->left);
+				if (node == nullptr)
+					return nullptr;
+				else if (node->left != nullptr)
+					return this->find_small_node(node->left);
 				return node;
 			}
 			node_t* erase (node_t **parent, node_t *node, const value_type& val) noexcept
 			{
+				if (node == nullptr)
+					return nullptr;
+				else if (val > node->value)
+					return this->erase(&(node->right), node->right, val);
+				else if (val < node->value)
+					return this->erase(&(node->left), node->left, val);
+				
+				if (node->right == nullptr && node->left == nullptr)
+					*parent = nullptr;
+				else if (node->right == nullptr) 
+					*parent = (*parent)->left;
+				else if (node->left == nullptr)
+					*parent = (*parent)->right;
+				else {
+					node_t *snode = this->find_small_node(node);
+					(*parent)->value = snode->value;
+					this->erase_small_node(&(node), node);
+					return *parent;
+				}
+
+				delete node;
+				this->_size--;
+				return *parent;
 			}
 			void erase_subtree(node_t **parent, node_t *node) noexcept
 			{
@@ -76,9 +102,25 @@ namespace yadsl
 				this->erase_subtree(&(node->right), node->right);
 				this->erase_subtree(&(node->left), node->left);
 
+				this->_size--;
 				delete node;
 				*parent = nullptr;
+			}
+			node_t* erase_small_node (node_t **parent, node_t *node) noexcept
+			{
+				if (node == nullptr)
+					return nullptr;
+				else if (node->left != nullptr)
+					return this->erase_small_node(&(node->left), node->left);
+				
+				if (node->right != nullptr)
+					*parent = node->right;
+				else
+					*parent = nullptr;
+				
 				this->_size--;
+				delete node;
+				return *parent;
 			}
 			void erase_leaves (node_t **parent, node_t *node) noexcept
 			{
@@ -143,16 +185,13 @@ namespace yadsl
 			}
 			void push (const value_type& val)
 			{
-				if (this->root == nullptr)
-					this->root = new node_t(val);
-				else
-					this->add(this->root, val);
+				this->add(this->root, val);
 			}
 			node_t* erase (const value_type& val) noexcept
 			{
 				return this->erase(&(this->root), this->root, val);
 			}
-			void erase_subtree (node_t *node)
+			void erase_subtree (node_t *node) noexcept
 			{
 				this->erase_subtree(&(node->right), node->right);
 				this->erase_subtree(&(node->left), node->left);
