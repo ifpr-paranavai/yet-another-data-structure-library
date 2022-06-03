@@ -56,7 +56,7 @@ namespace yadsl
 					return nullptr;
 				if (val < node->value)
 					return this->get(node->left, val);
-				else if (val >= node->value)
+				else if (val > node->value)
 					return this->get(node->right, val);
 				return node;
 			}
