@@ -46,16 +46,6 @@ namespace yadsl
 				}
 				this->_size++;
 			}
-			node_t* get (node_t *node, const value_type& val) const noexcept
-			{
-				if (node == nullptr)
-					return nullptr;
-				if (val < node->value)
-					return this->get(node->left, val);
-				else if (val > node->value)
-					return this->get(node->right, val);
-				return node;
-			}
 			node_t* erase (node_t **parent, node_t *node, const value_type& val) noexcept
 			{
 				if (node == nullptr)
@@ -136,7 +126,19 @@ namespace yadsl
 			}
 			node_t* get (const value_type& val) const noexcept
 			{
-				return this->get(this->root, val);
+				if (this->root == nullptr)
+					return nullptr;
+
+				node_t *node = this->root;
+				while (node->value != val) {
+					if (val < node->value)
+						node = node->left;
+					else
+						node = node->right;
+					if (node == nullptr)
+						break;
+				}
+				return node;
 			}
 
 		// capacity
