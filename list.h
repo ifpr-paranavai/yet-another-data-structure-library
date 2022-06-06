@@ -41,11 +41,7 @@ namespace yadsl
 			{
 				if (index > LINDEX)
 					throw std::out_of_range("Index out of range");
-				else if(index == 0)
-					return this->head;
-				else if (index == LINDEX)
-					return this->tail;
-
+					
 				node_t *node;
 				if (index < (LINDEX / 2)) {
 					node = this->head;
