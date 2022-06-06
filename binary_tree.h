@@ -156,9 +156,9 @@ namespace yadsl
 		public:
 			void operator<< (const value_type& val)
 			{
-				this->push(val);
+				this->add(val);
 			}
-			void push (const value_type& val)
+			void add (const value_type& val)
 			{
 				if (this->root == nullptr) {
 					this->root = new node_t(val);
