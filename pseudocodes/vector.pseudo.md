@@ -15,11 +15,11 @@
             else
                 this.capacity = this.capacity + 1
                 temp = arr
-                delete this.arr
+                dealloc this.arr
                 this.arr = alloc [capacity]
                 for i = 0 to this.size - 1
                     this.arr[i] = temp[i]
-                delete temp
+                dealloc temp
                 this.arr[this.size] = value
             this.size = this.size + 1
 
