@@ -66,7 +66,7 @@
 				this.head = NIL
 				this.tail = NIL
 			this.size = this.size-1
-			delete head_node
+			dealloc head_node
 		
 		Pop-Back()
 			if this.tail = NIL
@@ -79,7 +79,7 @@
 				this.head = NIL
 				this.tail = NIL
 			this.size = this.size-1
-			delete tail_node
+			dealloc tail_node
 
 			Pop-Back()
 				if this.tail == NIL
