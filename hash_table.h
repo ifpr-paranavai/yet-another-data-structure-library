@@ -32,7 +32,6 @@ namespace yadsl
 		public:
 			hash_table_t (size_type capacity)
 			{
-				std::cout << "prime:" << next_prime(next_prime(capacity * 2)) << std::endl;
 				this->vector.assign(next_prime(next_prime(capacity * 2)), list_t<value_type>());
 			}
 
