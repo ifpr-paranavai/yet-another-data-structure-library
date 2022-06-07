@@ -67,6 +67,30 @@ namespace yadsl
 				list->push_back(value);
 				this->_size++;
 			}
+			void erase (const value_type& value) noexcept
+			{
+				list_t<value_type> *list = &(this->vector[this->hash(value)]);
+				list->erase(list->get(value));
+				this->_size--;
+			}
+			void clear () noexcept
+			{
+				for (uint64_t i = 0; i < this->vector.size(); i++) {
+					list_t<value_type> *list = &(this->vector[i]);
+					list->clear();
+				}
+			}
+
+		// others
+		public:
+			void print () noexcept
+			{
+				for (uint64_t i = 0; i < this->vector.size(); i++) {
+					list_t<value_type> *list = &(this->vector[i]);
+					std::cout << "[" << i << "] = ";
+					list->print();
+				}
+			}
 	};
 }
 
