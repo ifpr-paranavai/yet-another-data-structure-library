@@ -78,6 +78,10 @@ namespace yadsl
 				if (this->arr != nullptr)
 					delete[] this->arr;
 			}
+			vector_t ()
+			{
+				this->arr = new value_type[0];
+			}
 			vector_t (size_type capacity)
 			{
 				this->alloc(capacity);
