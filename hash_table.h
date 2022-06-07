@@ -36,6 +36,14 @@ namespace yadsl
 				this->vector.assign(next_prime(next_prime(capacity * 2)), list_t<value_type>());
 			}
 
+		// element access
+		public:
+			value_type* get (const value_type& value) noexcept
+			{
+				list_t<value_type> *list = &(this->vector[this->hash(value)]);
+				return &(list->get(value)->value);
+			}
+
 		// capacity
 		public:
 			inline size_type size () const noexcept
