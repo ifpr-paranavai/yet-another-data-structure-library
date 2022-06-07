@@ -32,7 +32,7 @@ namespace yadsl
 		public:
 			hash_table_t (size_type capacity)
 			{
-				this->vector.assign(next_prime(next_prime(capacity * 2)), list_t<value_type>());
+				this->vector.assign(next_prime(capacity * 2), list_t<value_type>());
 			}
 
 		// element access
