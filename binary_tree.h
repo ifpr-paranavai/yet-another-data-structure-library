@@ -1,5 +1,5 @@
-#ifndef __YADSL_BTREE__
-#define __YADSL_BTREE__
+#ifndef __YADSL_BINARY_TREE__
+#define __YADSL_BINARY_TREE__
 
 #include <cinttypes>
 #include <iostream>

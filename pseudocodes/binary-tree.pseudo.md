@@ -44,7 +44,7 @@
 				temp = node.right
 				while node.left
 					temp = temp.left
-				tem.left = node.left
+				temp.left = node.left
 			
 			dealloc node
 			this.size = this.size + 1
@@ -60,7 +60,7 @@
 		Get(node, value)
 			if this.root == NIL
 				return NIL
-			node = this,root
+			node = this.root
 			while node.value != value
 				if value < node.value
 					node = node.left
