@@ -24,7 +24,7 @@ namespace yadsl
 			size_type _size = 0;
 
 		private:
-			hash_type hash (value_type value) const noexcept
+			hash_type hash (const value_type& value) const noexcept
 			{
 				return value % this->vector.capacity();
 			}
@@ -39,8 +39,11 @@ namespace yadsl
 		public:
 			value_type* get (const value_type& value) noexcept
 			{
-				list_t<value_type> *list = &(this->vector[this->hash(value)]);
-				return &(list->get(value)->value);
+				list_t<value_type>& list = this->vector[this->hash(value)];
+				struct list_t<value_type>::node_t *node = list.get(value);
+				if (node == nullptr)
+					return nullptr;
+				return &(node->value);
 			}
 
 		// capacity
@@ -62,21 +65,21 @@ namespace yadsl
 			} 
 			void add (const value_type& value)
 			{
-				list_t<value_type> *list = &(this->vector[this->hash(value)]);
-				list->push_back(value);
+				list_t<value_type>& list = this->vector[this->hash(value)];
+				list.push_back(value);
 				this->_size++;
 			}
 			void erase (const value_type& value) noexcept
 			{
-				list_t<value_type> *list = &(this->vector[this->hash(value)]);
-				list->erase(list->get(value));
+				list_t<value_type>& list = this->vector[this->hash(value)];
+				list.erase(list.get(value));
 				this->_size--;
 			}
 			void clear () noexcept
 			{
 				for (uint64_t i = 0; i < this->vector.size(); i++) {
-					list_t<value_type> *list = &(this->vector[i]);
-					list->clear();
+					list_t<value_type>& list = this->vector[i];
+					list.clear();
 				}
 			}
 
@@ -85,9 +88,9 @@ namespace yadsl
 			void print () noexcept
 			{
 				for (uint64_t i = 0; i < this->vector.size(); i++) {
-					list_t<value_type> *list = &(this->vector[i]);
+					list_t<value_type>& list = this->vector[i];
 					std::cout << "[" << i << "] = ";
-					list->print();
+					list.print();
 				}
 			}
 	};
