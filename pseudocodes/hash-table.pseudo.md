@@ -15,7 +15,7 @@
 			if n <= 1
 				return false
 			if n <= 3
-				return false
+				return true
 			if (n mod 2) == 0 or (n mod 3) == 0
 				return false
 			i = 5
@@ -44,7 +44,10 @@
 
 		Get(value)
 			list = this.arr[this.Hash(value)]
-			return list.Get(value).value
+			list_node = list.Get(value)
+			if (list_node == NIL)
+				return NIL
+			return list_node.value
 
 		Erase(value)
 			list = this.arr[this.Hash(value)]
