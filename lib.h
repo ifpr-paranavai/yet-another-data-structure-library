@@ -1,6 +1,8 @@
 #ifndef __LIB__
 #define __LIB__
 
+#include <cinttypes>
+
 #define ENVBITSIZE 64 // bit size of operational system
 // check bit size of operational system
 #if _WIN32 || _WIN64 || __GNUC__
@@ -55,6 +57,9 @@
 		{ \
 			return this->VAR; \
 		}
+
+bool is_prime (uint64_t n);
+uint64_t next_prime (uint64_t n);
 
 #endif
 
