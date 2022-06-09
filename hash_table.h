@@ -3,47 +3,67 @@
 
 #include <cinttypes>
 #include <iostream>
+#include <string>
 #include "vector.h"
 #include "list.h"
+#include "pair.h"
 #include "lib.h"
 
 using namespace yadsl;
 
 namespace yadsl
 {
-	template<typename T>
-	class hash_table_t 
+	template< 
+		typename Key, 
+		typename T, 
+		typename Alloc = list_t<pair_t<Key, T>>
+	> class hash_table_t 
 	{
-		using value_type = T;
+		using key_type = Key;
+		using hashed_type = T;
+		using value_type = pair_t<key_type, hashed_type>;
+		using allocator_type = Alloc;
 		using size_type = uint64_t;
 		using index_type = uint64_t;
 		using hash_type = uint64_t;
 
 		private:
-			vector_t<list_t<value_type>> vector;
+			vector_t<allocator_type> vector;
 			size_type _size = 0;
 
 		private:
-			hash_type hash (const value_type& value) const noexcept
+			const hash_type hash (key_type key)
 			{
-				return value % this->vector.capacity();
+				return static_cast<hash_type>(key % this->vector.capacity());
 			}
 
 		public:
 			hash_table_t (size_type capacity)
 			{
-				this->vector.assign(next_prime(capacity * 2), list_t<value_type>());
+				this->vector.assign(next_prime(capacity * 2), allocator_type());
 			}
 
 		// element access
 		public:
-			value_type* get (const value_type& value) noexcept
+			hashed_type& at (const key_type& key)
 			{
-				list_t<value_type>& list = this->vector[this->hash(value)];
-				struct list_t<value_type>::node_t *node = list.get(value);
-				if (node == nullptr)
-					return nullptr;
-				return &(node->value);
+				allocator_type& allocator = this->vector[this->hash(key)];
+				for (auto it = allocator.begin(); it != nullptr ; it++) {
+					value_type pair = it->value;
+					if (pair.get_key() == key)
+						return pair.value();
+				}
+				throw std::out_of_range("element with given key not found");
+			}
+			value_type get (const key_type& key)
+			{
+				allocator_type& allocator = this->vector[this->hash(key)];
+				for (auto it = allocator.begin(); it != nullptr ; it++) {
+					value_type pair = it->value;
+					if (pair.get_key() == key)
+						return pair;
+				}
+				throw std::out_of_range("element with given key not found");
 			}
 
 		// capacity
@@ -59,27 +79,37 @@ namespace yadsl
 		
 		// modifiers
 		public:
-			void operator<< (const value_type& value)
+			void operator<< (const value_type& val)
 			{
-				this->add(value);
-			} 
-			void add (const value_type& value)
+				this->add(val);
+			}
+			void add (const value_type& val)
 			{
-				list_t<value_type>& list = this->vector[this->hash(value)];
-				list.push_back(value);
+				allocator_type& allocator = this->vector[this->hash(val.get_key())];
+				allocator << val;
 				this->_size++;
 			}
-			void erase (const value_type& value) noexcept
+			void add (const key_type& key, const hashed_type& val)
 			{
-				list_t<value_type>& list = this->vector[this->hash(value)];
-				list.erase(list.get(value));
-				this->_size--;
+				this->add(value_type(key, val));
+			}
+			void erase (const key_type& key) noexcept
+			{
+				allocator_type& allocator = this->vector[this->hash(key)];
+				for (auto it = allocator.begin(); it != nullptr ; it++) {
+					value_type pair = it->value;
+					if (pair.get_key() == key) {
+						allocator.erase(it);
+						this->_size--;
+						return;
+					}
+				}
 			}
 			void clear () noexcept
 			{
 				for (uint64_t i = 0; i < this->vector.size(); i++) {
-					list_t<value_type>& list = this->vector[i];
-					list.clear();
+					allocator_type& allocator = this->vector[i];
+					allocator.clear();
 				}
 			}
 
@@ -88,9 +118,20 @@ namespace yadsl
 			void print () noexcept
 			{
 				for (uint64_t i = 0; i < this->vector.size(); i++) {
-					list_t<value_type>& list = this->vector[i];
+					allocator_type& allocator = this->vector[i];
 					std::cout << "[" << i << "] = ";
-					list.print();
+					allocator.print();
+				}
+			}
+
+			void print (std::function<std::string(hashed_type)> func) noexcept
+			{
+				for (uint64_t i = 0; i < this->vector.size(); i++) {
+					allocator_type& allocator = this->vector[i];
+					std::cout << "[" << i << "] = ";
+					allocator.print([&] (value_type pair) {
+						return func(pair.get_value());
+					});
 				}
 			}
 	};
