@@ -5,6 +5,7 @@
 #include <exception>
 #include <cinttypes>
 #include <iostream>
+#include <string>
 #include "lib.h"
 
 #define LINDEX (this->_size-1) // last index
@@ -29,7 +30,26 @@ namespace yadsl
 				{
 					this->value = val;
 				}
+
+				node_t* operator++ (int)
+				{
+					return this->next;
+				}
+				node_t* operator-- (int)
+				{
+					return this->prev;
+				}
+				bool operator== (node_t* node)
+				{
+					return this == node;
+				}
+				bool operator!= (node_t* node)
+				{
+					return this != node;
+				}
 			};
+
+		using iterator = node_t;
 
 		private:
 			node_t *head = nullptr;
@@ -62,6 +82,15 @@ namespace yadsl
 				this->clear();
 			}
 
+		public:
+			inline iterator* begin () noexcept
+			{
+				return this->head;
+			}
+			inline iterator* end () noexcept
+			{
+				return this->tail;
+			}
 		// element access
 		public:
 			value_type& operator[] (index_type index)
@@ -266,6 +295,20 @@ namespace yadsl
 				std::cout << '[';
 				while (node != nullptr) {
 					std::cout << node->value;
+					node = node->next;
+					if (node != nullptr)
+						std::cout << ", ";
+				}
+				std::cout << ']';
+				std::cout << std::endl;
+			}
+
+			void print (std::function<std::string(value_type)> func) const noexcept
+			{
+				node_t *node = this->head;
+				std::cout << '[';
+				while (node != nullptr) {
+					std::cout << func(node->value);
 					node = node->next;
 					if (node != nullptr)
 						std::cout << ", ";
