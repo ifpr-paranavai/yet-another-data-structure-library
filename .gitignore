@@ -3,6 +3,8 @@
 !*.h
 !*.cpp
 !README.md
+!*.csv
+!*.bin
 !/pseudocodes/*.pseudo.md
 !*/
 

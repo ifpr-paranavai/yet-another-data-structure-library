@@ -36,7 +36,7 @@ namespace lib
                 this->is_running = false;
             }
 
-            inline std::chrono::nanoseconds elapsed() const noexcept
+            inline std::chrono::nanoseconds elapsed () const noexcept
             {
                 return this->_elapsed;
             }
@@ -54,7 +54,7 @@ namespace lib
             }
             double seconds () const noexcept
             {
-                return std::chrono::duration<double, std::ratio<1L, 1L>>(this->_elapsed).count();
+                return std::chrono::duration_cast<std::chrono::duration<double>>(this->_elapsed).count();
             }
     };
 }
