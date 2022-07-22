@@ -6,6 +6,7 @@
 #include "../lib/timer.h"
 
 #include "../vector.h"
+#include "../list.h"
 
 #define ELEMENTS_AMOUNT (2000000)
 #define TESTS_AMOUNT (30)
@@ -69,6 +70,46 @@ static void vector_operation_test (const operation_t& operation, double *times_b
     }
 }
 
+static void list_operation_test (const operation_t& operation, double *times_buffer)
+{
+    lib::timer_t timer;
+
+    for (int i = 0; i < TESTS_AMOUNT; i++) {
+        std::string input_filename("inputs" + std::to_string(i + 1) + ".bin");
+        read_input_file_into_buffer(input_filename.c_str());
+
+        yadsl::list_t<int> list;
+
+        if (operation == operation_t::search || operation == operation_t::deletion)
+            for (int j = 0; j < ELEMENTS_AMOUNT; j++)
+                list.push_back(buffer[j]);
+
+        timer.start();
+        for (int j = 0; j < ELEMENTS_AMOUNT; j++) {
+            switch (operation) {
+                case operation_t::insertion:
+                    list.push_back(buffer[j]);
+                    break;
+                case operation_t::search:
+                    list.get(buffer[j]);
+                    break;
+                case operation_t::deletion:
+                    list.erase(list.get(buffer[j]));
+                    break;
+                default:
+                    std::cerr << "Some error occurred when testing vector operation" << std::endl;
+                    exit(1);
+                    break;
+            }
+        }
+        timer.stop();
+
+        times_buffer[i] = timer.seconds();
+
+        std::cout << i << std::endl;
+    }
+}
+
 static void vector_tests ()
 {
     double insertion_times[TESTS_AMOUNT];
@@ -87,8 +128,27 @@ static void vector_tests ()
         csv << insertion_times[i] << search_times[i] << deletion_times[i] << lib::endrow;
 }
 
+static void list_tests ()
+{
+    double insertion_times[TESTS_AMOUNT];
+    double search_times[TESTS_AMOUNT];
+    double deletion_times[TESTS_AMOUNT];
+
+    list_operation_test(operation_t::insertion, insertion_times);
+    list_operation_test(operation_t::search, search_times);
+    list_operation_test(operation_t::deletion, deletion_times);
+
+    lib::csvfile_t csv((datasets_path + "list.csv").c_str());
+
+    csv << "insertion" << "search" << "deletion" << lib::endrow;
+
+    for (uint32_t i = 0; i < TESTS_AMOUNT; i++)
+        csv << insertion_times[i] << search_times[i] << deletion_times[i] << lib::endrow;
+}
+
 
 int main(int argc, char **argv)
 {
-    vector_tests();
+    // vector_tests();
+    list_tests();
 }
