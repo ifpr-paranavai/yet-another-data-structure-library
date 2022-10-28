@@ -198,8 +198,7 @@ namespace yadsl
 			int64_t find_index (const value_type& val)
 			{
 				for (uint64_t i = 0; i < this->_size; i++) {
-					value_type element = this->arr[i];
-					if (element == val)
+					if (this->arr[i] == val)
 						return i;
 				}
 				return -1;
