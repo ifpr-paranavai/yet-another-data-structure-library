@@ -185,6 +185,25 @@ namespace yadsl
 			{
 				return this->arr;
 			}
+			value_type& get (const value_type& val)
+			{
+				for (uint64_t i = 0; i < this->_size; i++) {
+					value_type& element = this->arr[i];
+					if (element == val)
+						return element;
+				}
+
+				throw "Not found";
+			}
+			int64_t find_index (const value_type& val)
+			{
+				for (uint64_t i = 0; i < this->_size; i++) {
+					value_type element = this->arr[i];
+					if (element == val)
+						return i;
+				}
+				return -1;
+			}
 			
 		// modifiers
 		public: 
@@ -284,9 +303,11 @@ namespace yadsl
 				this->realloc(il.size());
 				this->fill(il);
 			}
-			int64_t erase (index_type index) noexcept
+			int64_t erase (const value_type& val) noexcept
 			{
-				if (index > LINDEX)
+				int64_t index = this->find_index(val);
+
+				if (index == -1)
 					return -1;
 
 				this->lshift_arr_content(index);
