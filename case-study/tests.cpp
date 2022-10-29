@@ -1,154 +1,346 @@
-#include <filesystem>
-#include <iostream>
+#include <ctime>
+#include <random>
 #include <string>
+#include <chrono>
+#include <iostream>
+#include <cinttypes>
+#include <functional>
+#include <filesystem>
+#include <boost/program_options.hpp>
 
 #include "../lib/csvfile.h"
-#include "../lib/timer.h"
 
 #include "../vector.h"
 #include "../list.h"
+#include "../binary_tree.h"
+#include "../hash_table.h"
+#include "../pair.h"
 
-#define ELEMENTS_AMOUNT (2000000)
-#define TESTS_AMOUNT (30)
+namespace po = boost::program_options;
 
-enum class operation_t
+enum class flags_t
 {
-    insertion,
-    search,
-    deletion,
-}; 
+    ALL,
+    VECTOR,
+    LIST,
+    BINARY_TREE,
+    HASH_TABLE,
+};
 
-static int buffer[ELEMENTS_AMOUNT];
+static std::mt19937 rgenerator;
+static std::uniform_int_distribution<int> idistribution;
+
 std::filesystem::path current_path = std::filesystem::current_path();
-std::string input_files_path = current_path.string()+"/case-study/input-files/";
-std::string datasets_path = current_path.string()+"/case-study/datasets/";
+std::string datasets_path = current_path.string() + "/case-study/datasets/";
 
-static void read_input_file_into_buffer (const char *filename)
+static uint32_t tests_amount;
+static uint32_t numbers_amount;
+static flags_t flag;
+static char timestamp[80];
+static int **random_ints_buffer;
+std::function<void(void)> before_each;
+
+static flags_t string_to_flag (const std::string& flag)
 {
-    FILE *fp = fopen((input_files_path+filename).c_str(), "rb");
-    fread((void *)buffer, sizeof(int), ELEMENTS_AMOUNT, fp);
-    fclose(fp);
+    if (flag == "all")
+        return flags_t::ALL;
+    else if (flag == "vector")
+        return flags_t::VECTOR;
+    else if (flag == "list")
+        return flags_t::LIST;
+    else if (flag == "binary_tree")
+        return flags_t::BINARY_TREE;
+    else if (flag == "hash_table")
+        return flags_t::HASH_TABLE;
+    
+    std::cout << "Invalid flag! Type --flags to see the available flags." << std::endl;
+    exit(1);
 }
 
-static void vector_operation_test (const operation_t& operation, double *times_buffer)
+static void set_timestamp ()
 {
-    lib::timer_t timer;
+    time_t rawtime;
+    tm *timeinfo;
 
-    for (int i = 0; i < TESTS_AMOUNT; i++) {
-        std::string input_filename("inputs" + std::to_string(i + 1) + ".bin");
-        read_input_file_into_buffer(input_filename.c_str());
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(timestamp, 80, "%m_%d_%y_%H_%M_%S", timeinfo);
+}
 
-        yadsl::vector_t<int> vector(ELEMENTS_AMOUNT);
+static void setup_program_options (int argc, char **argv)
+{
+    po::variables_map vm;
+    po::options_description desc("Allowed options");
 
-        if (operation == operation_t::search || operation == operation_t::deletion)
-            for (int j = 0; j < ELEMENTS_AMOUNT; j++)
-                vector.push(buffer[j]);
+    desc.add_options()
+        ("tests_amount,ta", po::value<uint32_t>(), "set the amount of tests to be executed")
+        ("numbers_amount,na", po::value<uint32_t>(), "set the amount of numbers generated")
+        ("flag,f", po::value<std::string>()->default_value("all"), "flags to define which tests will be executed")
+        ("flags", "list of the available flags");
 
-        timer.start();
-        for (int j = 0; j < ELEMENTS_AMOUNT; j++) {
-            switch (operation) {
-                case operation_t::insertion:
-                    vector.push(buffer[j]);
-                    break;
-                case operation_t::search:
-                    vector.at(buffer[j]);
-                    break;
-                case operation_t::deletion:
-                    vector.erase(buffer[j]);
-                    break;
-                default:
-                    std::cerr << "Some error occurred when testing vector operation" << std::endl;
-                    exit(1);
-                    break;
-            }
-        }
-        timer.stop();
+    po::store(po::parse_command_line(argc, argv, desc), vm);
+    po::notify(vm);
 
-        times_buffer[i] = timer.seconds();
-
-        std::cout << i << std::endl;
+    if (vm.count("flags")) {
+        std::cout << "[ FLAGS ]" << std::endl;
+        std::cout << "all         |  run all the test suits" << std::endl;
+        std::cout << "vector      |  run only the vector's test suits" << std::endl;
+        std::cout << "binary_tree |  run only the binary tree's test suits" << std::endl;
+        std::cout << "hash_table  |  run only the hash table's test suits" << std::endl;
+        exit(0);
     }
-}
 
-static void list_operation_test (const operation_t& operation, double *times_buffer)
-{
-    lib::timer_t timer;
-
-    for (int i = 0; i < TESTS_AMOUNT; i++) {
-        std::string input_filename("inputs" + std::to_string(i + 1) + ".bin");
-        read_input_file_into_buffer(input_filename.c_str());
-
-        yadsl::list_t<int> list;
-
-        if (operation == operation_t::search || operation == operation_t::deletion)
-            for (int j = 0; j < ELEMENTS_AMOUNT; j++)
-                list.push_back(buffer[j]);
-
-        timer.start();
-        for (int j = 0; j < ELEMENTS_AMOUNT; j++) {
-            switch (operation) {
-                case operation_t::insertion:
-                    list.push_back(buffer[j]);
-                    break;
-                case operation_t::search:
-                    list.get(buffer[j]);
-                    break;
-                case operation_t::deletion:
-                    list.erase(list.get(buffer[j]));
-                    break;
-                default:
-                    std::cerr << "Some error occurred when testing vector operation" << std::endl;
-                    exit(1);
-                    break;
-            }
-        }
-        timer.stop();
-
-        times_buffer[i] = timer.seconds();
-
-        std::cout << i << std::endl;
+    if (!vm.count("tests_amount") || !vm.count("numbers_amount")) {
+        std::cerr << "Program options \"tests_amount\" and \"numbers_amount\" are required." << std::endl;
+        exit(1);
     }
+
+    tests_amount = vm["tests_amount"].as<uint32_t>();
+    numbers_amount = vm["numbers_amount"].as<uint32_t>();
+    flag = string_to_flag(vm["flag"].as<std::string>());
+    set_timestamp();
 }
 
-static void vector_tests ()
+static void setup_tests ()
 {
-    double insertion_times[TESTS_AMOUNT];
-    double search_times[TESTS_AMOUNT];
-    double deletion_times[TESTS_AMOUNT];
+    random_ints_buffer = new int*[tests_amount];
 
-    vector_operation_test(operation_t::insertion, insertion_times);
-    vector_operation_test(operation_t::search, search_times);
-    vector_operation_test(operation_t::deletion, deletion_times);
+    std::cout << "**** [ starting tests setup ] ****" << std::endl;
+    std::cout << "**** [ generating random values ] ****" << std::endl;
 
-    lib::csvfile_t csv((datasets_path + "vector.csv").c_str());
+    for (uint32_t i = 0; i < tests_amount; i++)
+    {
+        rgenerator.seed(i);
+        int *random_ints = new int[numbers_amount];
 
-    csv << "insertion" << "search" << "deletion" << lib::endrow;
+        for (uint32_t j = 0; j < numbers_amount; j++)
+        {
+            random_ints[j] = idistribution(rgenerator);
+        }
 
-    for (uint32_t i = 0; i < TESTS_AMOUNT; i++)
-        csv << insertion_times[i] << search_times[i] << deletion_times[i] << lib::endrow;
+        random_ints_buffer[i] = random_ints;
+    }
+
+    std::cout << "**** [ testes setup ended ] ****" << std::endl;
 }
 
-static void list_tests ()
+static void test(double *times_buffer, std::function<void(uint32_t)> func, 
+    std::function<void(int)> setup = nullptr)
 {
-    double insertion_times[TESTS_AMOUNT];
-    double search_times[TESTS_AMOUNT];
-    double deletion_times[TESTS_AMOUNT];
+    for (uint32_t i = 0; i < tests_amount; i++) {
+        int *random_ints = random_ints_buffer[i];
 
-    list_operation_test(operation_t::insertion, insertion_times);
-    list_operation_test(operation_t::search, search_times);
-    list_operation_test(operation_t::deletion, deletion_times);
+        if (before_each != nullptr)
+            before_each();
 
-    lib::csvfile_t csv((datasets_path + "list.csv").c_str());
+        if (setup != nullptr)
+            for (uint32_t j = 0; j < numbers_amount; j++)
+                setup(random_ints[j]);
 
-    csv << "insertion" << "search" << "deletion" << lib::endrow;
+        auto tbegin = std::chrono::steady_clock::now();
+        for (uint32_t j = 0; j < numbers_amount; j++) {
+            func(random_ints[j]);
+        }
+        auto tend = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::duration<double>>(tend - tbegin);
 
-    for (uint32_t i = 0; i < TESTS_AMOUNT; i++)
-        csv << insertion_times[i] << search_times[i] << deletion_times[i] << lib::endrow;
+        times_buffer[i] = elapsed.count();
+        std::cout << ".";
+    }
+    std::cout << std::endl;
 }
 
-
-int main(int argc, char **argv)
+static void generate_csv (const std::string& prefix, double *insertion_times, double *search_times, double *deletion_times)
 {
-    // vector_tests();
-    list_tests();
+    std::string filename = prefix + "_" + timestamp + ".csv";
+    lib::csvfile_t csv((datasets_path + filename).c_str());
+
+    std::cout << "/|\\ generating the csv \"" 
+        << filename 
+        << "\" at " 
+        << datasets_path 
+        << "/|\\" << std::endl;
+
+    csv << "insertion"
+        << "search"
+        << "deletion" << lib::endrow;
+
+    for (uint32_t i = 0; i < tests_amount; i++)
+        csv << insertion_times[i] 
+            << search_times[i] 
+            << deletion_times[i] << lib::endrow;
+}
+
+static void vector_test_suit ()
+{
+    if (flag != flags_t::ALL && flag != flags_t::VECTOR) {
+        std::cout << "skiping vector test suit" << std::endl;
+        return;
+    }
+    std::cout << "**** [ running vector test suit ] ****" << std::endl;
+
+    yadsl::vector_t<int> *vector = nullptr;
+    std::function<void(int)> setup_test = [&](int random_int) {
+        vector->push(random_int);
+    };
+
+    double insertion_times[tests_amount];
+    double search_times[tests_amount];
+    double deletion_times[tests_amount];
+
+    before_each = [&]() {
+        if (vector != nullptr)
+            delete vector;
+        vector = new yadsl::vector_t<int>(numbers_amount);
+    };
+
+    std::cout << "INSERTION" << std::endl;
+    test(insertion_times, [&](int random_int){
+        vector->push(random_int);
+    });
+    std::cout << "SEARCH" << std::endl;
+    test(search_times, [&](int random_int){
+        vector->get(random_int);
+    }, setup_test);
+    std::cout << "DELETION" << std::endl;
+    test(deletion_times, [&](int random_int){
+        vector->erase(random_int);
+    }, setup_test);
+
+    generate_csv("vector", insertion_times, search_times, deletion_times);
+}
+
+static void list_test_suit ()
+{
+    if (flag != flags_t::ALL && flag != flags_t::LIST) {
+        std::cout << "skiping list test suit" << std::endl;
+        return;
+    }
+    std::cout << "**** [ running list test suit ] ****" << std::endl;
+
+    yadsl::list_t<int> *list = nullptr;
+    std::function<void(int)> setup_test = [&](int random_int) {
+        list->push_back(random_int);
+    };
+
+    double insertion_times[tests_amount];
+    double search_times[tests_amount];
+    double deletion_times[tests_amount];
+
+    before_each = [&]() {
+        if (list != nullptr)
+            delete list;
+        list = new yadsl::list_t<int>();
+    };
+
+    std::cout << "INSERTION" << std::endl;
+    test(insertion_times, [&](int random_int){
+        list->push_back(random_int);
+    });
+    std::cout << "SEARCH" << std::endl;
+    test(search_times, [&](int random_int){
+        list->get(random_int);
+    }, setup_test);
+    std::cout << "DELETION" << std::endl;
+    test(deletion_times, [&](int random_int){
+        list->erase(list->get(random_int));
+    }, setup_test);
+
+    generate_csv("list", insertion_times, search_times, deletion_times);
+}
+
+static void binary_tree_test_suit ()
+{
+    if (flag != flags_t::ALL && flag != flags_t::BINARY_TREE) {
+        std::cout << "skiping binary tree test suit" << std::endl;
+        return;
+    }
+    std::cout << "**** [ running binary tree test suit ] ****" << std::endl;
+
+    yadsl::binary_tree_t<int> *tree = nullptr;
+    std::function<void(int)> setup_test = [&](int random_int) {
+        tree->add(random_int);
+    };
+
+    double insertion_times[tests_amount];
+    double search_times[tests_amount];
+    double deletion_times[tests_amount];
+
+    before_each = [&]() {
+        if (tree != nullptr)
+            delete tree;
+        tree = new yadsl::binary_tree_t<int>();
+    };
+
+    std::cout << "INSERTION" << std::endl;
+    test(insertion_times, [&](int random_int){
+        tree->add(random_int);
+    });
+    std::cout << "SEARCH" << std::endl;
+    test(search_times, [&](int random_int){
+        tree->get(random_int);
+    }, setup_test);
+    std::cout << "DELETION" << std::endl;
+    test(deletion_times, [&](int random_int){
+        tree->erase(random_int);
+    }, setup_test);
+
+    generate_csv("binary_tree", insertion_times, search_times, deletion_times);
+}
+
+static void hash_table_test_suit ()
+{
+    if (flag != flags_t::ALL && flag != flags_t::HASH_TABLE) {
+        std::cout << "skiping hash table test suit" << std::endl;
+        return;
+    }
+    std::cout << "**** [ running hash table test suit ] ****" << std::endl;
+
+    using pair_t = yadsl::pair_t<int, int>;
+    yadsl::hash_table_t<int, int> *hash_table = nullptr;
+    std::function<void(int)> setup_test = [&](int random_int) {
+        hash_table->add(pair_t(random_int, random_int));
+    };
+
+    double insertion_times[tests_amount];
+    double search_times[tests_amount];
+    double deletion_times[tests_amount];
+
+    before_each = [&]() {
+        if (hash_table != nullptr)
+            delete hash_table;
+        hash_table = new yadsl::hash_table_t<int, int>(numbers_amount % 2);
+    };
+
+    std::cout << "INSERTION" << std::endl;
+    test(insertion_times, [&](int random_int){
+        hash_table->add(pair_t(random_int, random_int));
+    });
+    std::cout << "SEARCH" << std::endl;
+    test(search_times, [&](int random_int){
+        hash_table->get(random_int);
+    }, setup_test);
+    std::cout << "DELETION" << std::endl;
+    test(deletion_times, [&](int random_int){
+        hash_table->erase(random_int);
+    }, setup_test);
+
+    generate_csv("hash_table", insertion_times, search_times, deletion_times);
+}
+
+static void run_tests ()
+{
+    std::cout << "**** [ starting to run the tests ] ****" << std::endl;
+    vector_test_suit();
+    list_test_suit();
+    binary_tree_test_suit();
+    hash_table_test_suit();
+}
+
+int main (int argc, char **argv)
+{
+    setup_program_options(argc, argv);
+    setup_tests();
+    run_tests();
+    return 0;
 }
