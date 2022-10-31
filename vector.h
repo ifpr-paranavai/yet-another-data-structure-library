@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <math.h>
+#include <cassert>
 #include "lib.h"
 
 #define LINDEX (this->_size - 1) // last index
@@ -187,17 +188,16 @@ namespace yadsl
 			}
 			value_type& get (const value_type& val)
 			{
-				for (uint64_t i = 0; i < this->_size; i++) {
-					value_type& element = this->arr[i];
-					if (element == val)
-						return element;
+				for (index_type i = 0; i < this->_size; i++) {
+					if (this->arr[i] == val)
+						return this->arr[i];
 				}
 
-				throw "Not found";
+				throw "error";
 			}
 			int64_t find_index (const value_type& val)
 			{
-				for (uint64_t i = 0; i < this->_size; i++) {
+				for (index_type i = 0; i < this->_size; i++) {
 					if (this->arr[i] == val)
 						return i;
 				}
