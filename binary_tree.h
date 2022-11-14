@@ -71,10 +71,7 @@ namespace yadsl
 						smallest_node = smallest_node->left;
 					}
 					// fix the smallest leaf parent pointer
-					if (smallest_node->right != nullptr)
-						*smallest_node_parent = smallest_node->right;
-					else
-						*smallest_node_parent = nullptr;
+					*smallest_node_parent = smallest_node->right;
 					// the smallest leaf inherits the deleted node subtrees 
 					smallest_node->left = node->left;
 					smallest_node->right = node->right;
