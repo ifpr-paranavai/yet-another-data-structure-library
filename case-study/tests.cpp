@@ -27,6 +27,13 @@ enum class flags_t
     HASH_TABLE,
 };
 
+enum class operation_t
+{
+    INSERTION,
+    SEARCH,
+    DELETION,
+};
+
 static std::mt19937 rgenerator;
 static std::uniform_int_distribution<int> idistribution;
 
@@ -124,18 +131,11 @@ static void setup_tests ()
     std::cout << "**** [ testes setup ended ] ****" << std::endl;
 }
 
-static void test(double *times_buffer, std::function<void(uint32_t)> func, 
+static void test(double *times_buffer, std::function<void(int)> func, 
     std::function<void(int)> setup = nullptr)
 {
     for (uint32_t i = 0; i < tests_amount; i++) {
         int *random_ints = random_ints_buffer[i];
-
-        if (before_each != nullptr)
-            before_each();
-
-        if (setup != nullptr)
-            for (uint32_t j = 0; j < numbers_amount; j++)
-                setup(random_ints[j]);
 
         auto tbegin = std::chrono::steady_clock::now();
         for (uint32_t j = 0; j < numbers_amount; j++) {
@@ -148,6 +148,63 @@ static void test(double *times_buffer, std::function<void(uint32_t)> func,
         std::cout << ".";
     }
     std::cout << std::endl;
+}
+
+static void test_vector (operation_t operation, double *times_buffer)
+{
+    int input_buffer[numbers_amount];
+    yadsl::vector_t<int> vector(numbers_amount);
+
+    for (uint32_t i = 0; i < tests_amount; i++) {
+        rgenerator.seed(i);
+
+        for (uint32_t j = 0; j < numbers_amount; j++)
+            input_buffer[j] = idistribution(rgenerator);
+    }
+
+    for (uint32_t i = 0; i < tests_amount; i++) {
+        if (operation != operation_t::INSERTION)
+            for (uint32_t j = 0; j < numbers_amount; j++)
+                vector.push(input_buffer[j]);
+
+        auto tbegin = std::chrono::steady_clock::now();
+        for (uint32_t j = 0; j < numbers_amount; j++) {
+            switch (operation) {
+                case operation_t::INSERTION:
+                    vector.push(input_buffer[j]);
+                    break;
+                case operation_t::SEARCH:
+                    try {
+                        vector.get(input_buffer[j]);
+                    }
+                    catch(const char* e) {
+                        std::cerr << e << '\n';
+                        std::cerr << input_buffer[j] << '\n';
+                    }
+                    break;
+                case operation_t::DELETION:
+                    try {
+                        vector.erase(input_buffer[j]);
+                    }
+                    catch(const char* e) {
+                        std::cerr << e << '\n';
+                        std::cerr << input_buffer[j] << '\n';
+                    }
+                    break;
+                default:
+                    std::cerr << "An unexpected error occurred" << std::endl;
+                    exit(1);
+            }
+        }
+        auto tend = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::duration<double>>(tend - tbegin);
+
+        times_buffer[i] = elapsed.count();
+        std::cout << ".";
+    }
+    std::cout << std::endl;
+
+    
 }
 
 static void generate_csv (const std::string& prefix, double *insertion_times, double *search_times, double *deletion_times)
@@ -179,33 +236,13 @@ static void vector_test_suit ()
     }
     std::cout << "**** [ running vector test suit ] ****" << std::endl;
 
-    yadsl::vector_t<int> *vector = nullptr;
-    std::function<void(int)> setup_test = [&](int random_int) {
-        vector->push(random_int);
-    };
-
     double insertion_times[tests_amount];
     double search_times[tests_amount];
     double deletion_times[tests_amount];
 
-    before_each = [&]() {
-        if (vector != nullptr)
-            delete vector;
-        vector = new yadsl::vector_t<int>(numbers_amount);
-    };
-
-    std::cout << "INSERTION" << std::endl;
-    test(insertion_times, [&](int random_int){
-        vector->push(random_int);
-    });
-    std::cout << "SEARCH" << std::endl;
-    test(search_times, [&](int random_int){
-        vector->get(random_int);
-    }, setup_test);
-    std::cout << "DELETION" << std::endl;
-    test(deletion_times, [&](int random_int){
-        vector->erase(random_int);
-    }, setup_test);
+    test_vector(operation_t::INSERTION, insertion_times);
+    test_vector(operation_t::SEARCH, search_times);
+    test_vector(operation_t::DELETION, deletion_times);
 
     generate_csv("vector", insertion_times, search_times, deletion_times);
 }
