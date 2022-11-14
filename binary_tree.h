@@ -67,7 +67,7 @@ namespace yadsl
 					node_t *smallest_node = node->right;
 					// track the smallest leaf of the subtree and its parent
 					while (smallest_node->left != nullptr) {
-						*smallest_node_parent = &(smallest_node->left);
+						smallest_node_parent = &(smallest_node->left);
 						smallest_node = smallest_node->left;
 					}
 					// fix the smallest leaf parent pointer
