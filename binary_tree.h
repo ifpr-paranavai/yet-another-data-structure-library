@@ -63,18 +63,22 @@ namespace yadsl
 					*parent = node->right;
 				else {
 					// go to the right subtree of the deleted node
-					node_t **smallest_leaf_parent = &(node->right); 
-					node_t *smallest_leaf = node->right;
+					node_t **smallest_node_parent = &(node->right); 
+					node_t *smallest_node = node->right;
 					// track the smallest leaf of the subtree and its parent
-					while (smallest_leaf->left != nullptr) {
-						*smallest_leaf_parent = smallest_leaf;
-						smallest_leaf = smallest_leaf->left;
+					while (smallest_node->left != nullptr) {
+						*smallest_node_parent = smallest_node;
+						smallest_node = smallest_node->left;
 					}
-					*smallest_leaf_parent = nullptr; // fix the smallest leaf parent pointer
+					// fix the smallest leaf parent pointer
+					if (smallest_node->right != nullptr)
+						*smallest_node_parent = smallest_node->right;
+					else
+						*smallest_node_parent = nullptr;
 					// the smallest leaf inherits the deleted node subtrees 
-					smallest_leaf->left = node->left;
-					smallest_leaf->right = node->right;
-					*parent = smallest_leaf; // fix the parent pointer
+					smallest_node->left = node->left;
+					smallest_node->right = node->right;
+					*parent = smallest_node; // fix the parent pointer
 				}
 
 				delete node;
