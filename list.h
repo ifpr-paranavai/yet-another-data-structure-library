@@ -31,19 +31,19 @@ namespace yadsl
 					this->value = val;
 				}
 
-				node_t* operator++ (int)
+				inline node_t* operator++ (int)
 				{
 					return this->next;
 				}
-				node_t* operator-- (int)
+				inline node_t* operator-- (int)
 				{
 					return this->prev;
 				}
-				bool operator== (node_t* node)
+				inline bool operator== (node_t* node)
 				{
 					return this == node;
 				}
-				bool operator!= (node_t* node)
+				inline bool operator!= (node_t* node)
 				{
 					return this != node;
 				}
@@ -117,6 +117,27 @@ namespace yadsl
 				}
 				return node;
 			}
+			node_t* get (std::function<bool(value_type&)> func)
+			{
+				node_t *node = this->head;
+				while (node != nullptr && !func(node->value)) {
+					node = node->next;
+				}
+				return node;
+			}
+			#if DEBUG_MODE
+				node_t* get (const value_type& val, stats_t<uint64_t>& stats)
+				{
+					uint64_t count = 0;
+					node_t *node = this->head;
+					while (node != nullptr && node->value != val) {
+						count++;
+						node = node->next;
+					}
+					stats.add(count);
+					return node;
+				}
+			#endif
 
 		// capacity
 		public:

@@ -2,6 +2,56 @@
 #define __LIB__
 
 #include <cinttypes>
+#include <cassert>
+
+#define DEBUG_MODE 0
+
+#if DEBUG_MODE
+	#include <vector>
+	#include <cmath>
+
+	template <typename T>
+	class stats_t
+	{
+		private:
+			std::vector<T> dataset;
+		
+		public:
+			stats_t (uint64_t capacity)
+			{
+				this->dataset.reserve(capacity);
+			}
+			void add (T val)
+			{
+				this->dataset.push_back(val);
+			}
+			double mean ()
+			{
+				uint64_t size = this->dataset.size();
+				double sum = 0;
+
+				for (auto it : this->dataset) {
+					sum += static_cast<double>(it);
+				}
+
+				return sum / static_cast<double>(size);
+			}
+			double stddev ()
+			{
+				uint32_t size = this->dataset.size();
+				double mean = this->mean();
+				double dev = 0;
+
+				for (auto it : this->dataset) {
+					double diff = static_cast<double>(it) - mean;
+					dev += diff * diff;
+				}
+
+				dev /= static_cast<double>(size);
+				return sqrt(dev);
+			}
+	};
+#endif
 
 #define ENVBITSIZE 64 // bit size of operational system
 // check bit size of operational system

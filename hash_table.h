@@ -5,7 +5,6 @@
 #include <iostream>
 #include <string>
 #include <cmath>
-#include "vector.h"
 #include "list.h"
 #include "pair.h"
 #include "lib.h"
@@ -31,7 +30,7 @@ namespace yadsl
 		using hash_type = uint32_t;
 
 		private:
-			vector_t<allocator_type> vector;
+			allocator_type *vector;
 			size_type _capacity = 0;
 			size_type _size = 0;
 			unsigned int nbits = 0;
@@ -53,7 +52,7 @@ namespace yadsl
 			}
 			inline hash_type division_hash (key_type key)
 			{
-				return key % this->_capacity;
+				return static_cast<hash_type>(key % this->_capacity);
 			}
 			inline hash_type hash_32 (hash_type value, unsigned int bits)
 			{
@@ -62,36 +61,63 @@ namespace yadsl
 			}
 
 		public:
+			~hash_table_t ()
+			{
+				delete[] this->vector;
+			}
 			hash_table_t (size_type capacity)
 			{
-				this->_capacity = get_higher_pow2(capacity);
-				this->vector.assign(this->_capacity, allocator_type());
+				// this->_capacity = get_higher_pow2(capacity);
+				this->_capacity = capacity;
+				this->vector = new allocator_type[this->_capacity];
 			}
 
 		// element access
 		public:
 			hashed_type& at (const key_type& key)
 			{
-				hash_type hash = this->hash_32(key, this->nbits);
-				allocator_type &allocator = this->vector[hash];
-				for (auto it = allocator.begin(); it != nullptr; it++) {
-					value_type pair = it->value;
-					if (pair.get_key() == key)
-						return pair.value();
+				hash_type hash = this->division_hash(key);
+				allocator_type& allocator = this->vector[hash];
+				auto list_node = allocator.begin();
+				while (list_node != nullptr) {
+					if (list_node->value.get_key() == key)
+						return list_node->value.get_value();
+
+					list_node = list_node->next;
 				}
 				throw std::out_of_range("element with given key not found");
 			}
 			value_type& get (const key_type& key)
 			{
-				hash_type hash = this->hash_32(key, this->nbits);
-				allocator_type &allocator = this->vector[hash];
-				for (auto it = allocator.begin(); it != nullptr; it++) {
-					value_type& pair = it->value;
-					if (pair.get_key() == key)
-						return pair;
+				hash_type hash = this->division_hash(key);
+				allocator_type& allocator = this->vector[hash];
+				auto list_node = allocator.begin();
+				while (list_node != nullptr) {
+					if (list_node->value.get_key() == key)
+						return list_node->value;
+
+					list_node = list_node->next;
 				}
 				throw std::out_of_range("element with given key not found");
 			}
+			#if DEBUG_MODE
+				value_type& get (const key_type& key, stats_t<uint64_t>& stats)
+				{
+					uint64_t count = 0;
+					hash_type hash = this->hash_32(key, this->nbits);
+					allocator_type& allocator = this->vector[hash];
+					for (auto it = allocator.begin(); it != nullptr; it++) {
+						count++;
+						value_type& pair = it->value;
+						if (pair.get_key() == key) {
+							stats.add(count);
+							return pair;
+						}
+					}
+					stats.add(count);
+					throw std::out_of_range("element with given key not found");
+				}
+			#endif
 
 		// capacity
 		public:
@@ -112,9 +138,9 @@ namespace yadsl
 			}
 			void add (const value_type& val)
 			{
-				hash_type hash = this->hash_32(val.get_key(), this->nbits);
-				allocator_type &allocator = this->vector[hash];
-				allocator << val;
+				hash_type hash = this->division_hash(val.get_key());
+				allocator_type& allocator = this->vector[hash];
+				allocator.push_back(val);
 				this->_size++;
 			}
 			void add (const key_type& key, const hashed_type& val)
@@ -123,15 +149,16 @@ namespace yadsl
 			}
 			void erase (const key_type& key) noexcept
 			{
-				hash_type hash = this->hash_32(key, this->nbits);
-				allocator_type &allocator = this->vector[hash];
-				for (auto it = allocator.begin(); it != nullptr; it++) {
-					value_type pair = it->value;
-					if (pair.get_key() == key) {
-						allocator.erase(it);
-						this->_size--;
+				hash_type hash = this->division_hash(key);
+				allocator_type& allocator = this->vector[hash];
+				auto list_node = allocator.begin();
+				while (list_node != nullptr) {
+					if (list_node->value.get_key() == key) {
+						allocator.erase(list_node);
 						return;
 					}
+
+					list_node = list_node->next;
 				}
 			}
 			void clear () noexcept
