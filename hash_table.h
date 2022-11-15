@@ -4,10 +4,13 @@
 #include <cinttypes>
 #include <iostream>
 #include <string>
+#include <cmath>
 #include "vector.h"
 #include "list.h"
 #include "pair.h"
 #include "lib.h"
+
+#define GOLDEN_RATIO (0x61C88647)
 
 using namespace yadsl;
 
@@ -23,43 +26,67 @@ namespace yadsl
 		using hashed_type = T;
 		using value_type = pair_t<key_type, hashed_type>;
 		using allocator_type = Alloc;
-		using size_type = uint64_t;
-		using index_type = uint64_t;
-		using hash_type = uint64_t;
+		using size_type = uint32_t;
+		using index_type = uint32_t;
+		using hash_type = uint32_t;
 
 		private:
 			vector_t<allocator_type> vector;
+			size_type _capacity = 0;
 			size_type _size = 0;
+			unsigned int nbits = 0;
 
 		private:
-			const hash_type hash (key_type key)
+			inline unsigned int get_higher_pow2 (unsigned int n)
 			{
-				return static_cast<hash_type>(key % this->vector.capacity());
+				unsigned int nbits = 0;
+				unsigned int pow2 = 1;
+				
+				while (pow2 < n)
+				{
+					nbits++;
+					pow2 = 1 << nbits;
+				}
+
+				this->nbits = nbits;
+				return pow2;
+			}
+			inline hash_type division_hash (key_type key)
+			{
+				return key % this->_capacity;
+			}
+			inline hash_type hash_32 (hash_type value, unsigned int bits)
+			{
+				hash_type hash = value * GOLDEN_RATIO;
+				return hash >> (32 - bits);
 			}
 
 		public:
 			hash_table_t (size_type capacity)
 			{
-				this->vector.assign(next_prime(capacity * 2), allocator_type());
+				this->_capacity = get_higher_pow2(capacity);
+				this->vector.assign(this->_capacity, allocator_type());
 			}
 
 		// element access
 		public:
 			hashed_type& at (const key_type& key)
 			{
-				allocator_type& allocator = this->vector[this->hash(key)];
-				for (auto it = allocator.begin(); it != nullptr ; it++) {
+				hash_type hash = this->hash_32(key, this->nbits);
+				allocator_type &allocator = this->vector[hash];
+				for (auto it = allocator.begin(); it != nullptr; it++) {
 					value_type pair = it->value;
 					if (pair.get_key() == key)
 						return pair.value();
 				}
 				throw std::out_of_range("element with given key not found");
 			}
-			value_type get (const key_type& key)
+			value_type& get (const key_type& key)
 			{
-				allocator_type& allocator = this->vector[this->hash(key)];
-				for (auto it = allocator.begin(); it != nullptr ; it++) {
-					value_type pair = it->value;
+				hash_type hash = this->hash_32(key, this->nbits);
+				allocator_type &allocator = this->vector[hash];
+				for (auto it = allocator.begin(); it != nullptr; it++) {
+					value_type& pair = it->value;
 					if (pair.get_key() == key)
 						return pair;
 				}
@@ -85,7 +112,8 @@ namespace yadsl
 			}
 			void add (const value_type& val)
 			{
-				allocator_type& allocator = this->vector[this->hash(val.get_key())];
+				hash_type hash = this->hash_32(val.get_key(), this->nbits);
+				allocator_type &allocator = this->vector[hash];
 				allocator << val;
 				this->_size++;
 			}
@@ -95,8 +123,9 @@ namespace yadsl
 			}
 			void erase (const key_type& key) noexcept
 			{
-				allocator_type& allocator = this->vector[this->hash(key)];
-				for (auto it = allocator.begin(); it != nullptr ; it++) {
+				hash_type hash = this->hash_32(key, this->nbits);
+				allocator_type &allocator = this->vector[hash];
+				for (auto it = allocator.begin(); it != nullptr; it++) {
 					value_type pair = it->value;
 					if (pair.get_key() == key) {
 						allocator.erase(it);
@@ -107,7 +136,7 @@ namespace yadsl
 			}
 			void clear () noexcept
 			{
-				for (uint64_t i = 0; i < this->vector.size(); i++) {
+				for (uint32_t i = 0; i < this->vector.size(); i++) {
 					allocator_type& allocator = this->vector[i];
 					allocator.clear();
 				}
@@ -117,7 +146,7 @@ namespace yadsl
 		public:
 			void print () noexcept
 			{
-				for (uint64_t i = 0; i < this->vector.size(); i++) {
+				for (uint32_t i = 0; i < this->vector.size(); i++) {
 					allocator_type& allocator = this->vector[i];
 					std::cout << "[" << i << "] = ";
 					allocator.print();
@@ -126,7 +155,7 @@ namespace yadsl
 
 			void print (std::function<std::string(hashed_type)> func) noexcept
 			{
-				for (uint64_t i = 0; i < this->vector.size(); i++) {
+				for (uint32_t i = 0; i < this->vector.size(); i++) {
 					allocator_type& allocator = this->vector[i];
 					std::cout << "[" << i << "] = ";
 					allocator.print([&] (value_type pair) {
